@@ -1,11 +1,12 @@
 """
-Utility to generate quiz questions using OpenAI API.
+Utility to generate quiz questions using Mistral API.
 """
 
 import json
+import os
 import re
 from dotenv import load_dotenv
-from openai import OpenAI
+from mistralai import Mistral
 import streamlit as st
 
 load_dotenv()
@@ -13,7 +14,7 @@ load_dotenv()
 
 def generate_quiz(text_content, num_questions, difficulty):
     """
-    Generate MCQ quiz questions from text content using OpenAI API.
+    Generate MCQ quiz questions from text content using Mistral API.
 
     Args:
         text_content (str): The extracted text from slides.
@@ -38,10 +39,7 @@ def generate_quiz(text_content, num_questions, difficulty):
         raise ValueError(f"Difficulty must be one of: {', '.join(valid_difficulties)}")
 
     api_key = _get_api_key()
-    client = OpenAI(
-    api_key=api_key,
-    base_url="https://openrouter.ai/api/v1"
-)
+    client = Mistral(api_key=api_key)
 
     difficulty_instructions = {
         "Simple": "Focus on basic recall, definitions, and fundamental concepts from the text. Questions should be straightforward and test surface-level understanding.",
@@ -55,7 +53,7 @@ Difficulty Level: {difficulty}
 {difficulty_instructions[difficulty]}
 
 Text Content:
-{text_content[:12000]}  # Limit text to avoid token limits
+{text_content[:12000]}
 
 For each question, provide:
 1. A clear question
@@ -82,8 +80,8 @@ Example format:
 Generate exactly {num_questions} questions. Ensure each question is unique and directly based on the provided text."""
 
     try:
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
+        response = client.chat.complete(
+            model="mistral-large-latest",
             messages=[
                 {"role": "system", "content": "You are a helpful quiz generator that outputs only valid JSON."},
                 {"role": "user", "content": prompt}
@@ -101,29 +99,26 @@ Generate exactly {num_questions} questions. Ensure each question is unique and d
 
 
 def _get_api_key():
-    import os
-    from dotenv import load_dotenv
-
     load_dotenv()
 
-    api_key = os.getenv("OPENAI_API_KEY")
+    api_key = os.getenv("MISTRAL_API_KEY")
 
     if not api_key:
         try:
-            api_key = st.secrets["OPENAI_API_KEY"]
+            api_key = st.secrets["MISTRAL_API_KEY"]
         except Exception:
             pass
 
     if not api_key:
         raise ValueError(
-            "OPENAI_API_KEY not found. Create a .env file in the project root with:\n\nOPENAI_API_KEY=your_api_key"
+            "MISTRAL_API_KEY not found. Create a .env file in the project root with:\n\nMISTRAL_API_KEY=your_api_key"
         )
 
     return api_key
 
 
 def _parse_response(content, expected_count):
-    """Parse the JSON response from OpenAI."""
+    """Parse the JSON response from Mistral."""
     # Try to extract JSON from the response (handle markdown code blocks)
     json_match = re.search(r'```(?:json)?\s*([\s\S]*?)\s*```', content)
     if json_match:
@@ -158,10 +153,6 @@ def _parse_response(content, expected_count):
         if q["correct_answer"] not in q["options"]:
             continue
         validated.append(q)
-
-    if len(validated) < expected_count:
-        # If we got fewer questions than expected, that's okay but warn
-        pass
 
     if not validated:
         raise ValueError("No valid questions could be parsed from the response.")

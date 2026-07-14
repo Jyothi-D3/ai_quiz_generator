@@ -766,7 +766,7 @@ def render_upload_page():
 
             except Exception as e:
                 st.error(f"❌ Failed to generate quiz: {str(e)}")
-                st.info("💡 Make sure your OpenAI API key is set in the environment variable OPENAI_API_KEY.")
+                st.info("💡 Make sure your Mistral API key is set in the environment variable MISTRAL_API_KEY.")
 
         st.markdown('</div>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
